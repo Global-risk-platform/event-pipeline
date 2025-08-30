@@ -288,16 +288,18 @@ healthcheck:
     command: [ "tail", "-f", "/dev/null" ]
 
   superset:
-    image: apache/superset:4.0.2
+    image: ${SUPERSET_IMAGE}
     container_name: superset
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
     ports:
       - "8088:8088"
     networks:
       - data-network
-    environment:
-      - SUPERSET_CONFIG_PATH=/app/superset_home/superset_config.py
+    env_file:
+      - ./.env
+      - ./config/superset/superset.env
     volumes:
       - ./superset:/app/superset_home
       - ./config/superset:/config
