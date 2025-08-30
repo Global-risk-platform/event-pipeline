@@ -145,18 +145,25 @@ services:
       - AWS_SECRET_ACCESS_KEY=minioadmin
 
   postgres:
-    image: postgres:13
+    image: ${POSTGRES_IMAGE}
     container_name: postgres
-    environment:
-      - POSTGRES_USER=airflow
-      - POSTGRES_PASSWORD=airflow
-      - POSTGRES_DB=airflow,metastore_db
+    env_file:
+      - ./.env
+      - ./config/postgres/postgres.env
     volumes:
-      - ./postgres-data:/var/lib/postgresql/data
+      - postgres-data:/var/lib/postgresql/data
+- ./config/postgres/init-postgres.sh:/docker-entrypoint-initdb.d/init-postgres.sh:ro
+      - ./config/postgres/healthcheck.sh:/usr/local/bin/healthcheck.sh:ro
     ports:
       - "5432:5432"
     networks:
       - data-network
+healthcheck:
+      test: [ "CMD", "healthcheck.sh" ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 45s
 
   airflow-init:
     #image: apache/airflow:2.9.2
