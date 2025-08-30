@@ -37,16 +37,16 @@ services:
     command: [ "sh", "/config/setup-topics.sh" ]
 
   minio:
-    image: minio/minio:RELEASE.2024-07-29T22-14-52Z
+    image: ${MINIO_IMAGE}
     container_name: minio
     ports:
       - "9000:9000"
       - "9001:9001"
     networks:
       - data-network
-    environment:
-      MINIO_ROOT_USER: minioadmin
-      MINIO_ROOT_PASSWORD: minioadmin
+    env_file:
+      - ./.env
+      - ./config/minio/minio.env
     command: minio server /data --console-address ":9001"
     volumes:
       - minio-data:/data
@@ -130,8 +130,6 @@ services:
       - .:/app
       - ./spark-ivy-cache:/home/spark/.ivy2
       - spark-jars:/opt/spark/jars
-    environment:
-      - SPARK_LOCAL_DIRS=/tmp
 
   hive-metastore:
     image: ${HIVE_METASTORE_IMAGE}
@@ -262,11 +260,13 @@ healthcheck:
     build: .
     container_name: jupyter-lab
     depends_on:
-      - spark-master
+      spark-master:
+        condition: service_started
     ports:
       - "8888:8888"
-    environment:
-      - PROJECT_ROOT=/app
+    env_file:
+      - ./.env
+      - ./config/jupyter/jupyter.env
     volumes:
       - .:/app
       - spark-jars:/opt/spark/jars
@@ -279,13 +279,9 @@ healthcheck:
     container_name: dbt
     env_file:
       - ./.env
+      - ./config/dbt/dbt.env
     networks:
       - data-network
-    environment:
-      - AWS_ACCESS_KEY_ID=${MINIO_ACCESS_KEY}
-      - AWS_SECRET_ACCESS_KEY=${MINIO_SECRET_KEY}
-      - AWS_ENDPOINT_URL=${MINIO_ENDPOINT}
-      - AWS_S3_ALLOW_UNSAFE_RENAME=true
     volumes:
       - ./transforms:/app
     # 이 컨테이너는 시작된 후, tail 명령을 실행하며 계속 살아있게 된다.
@@ -304,16 +300,66 @@ healthcheck:
       - SUPERSET_CONFIG_PATH=/app/superset_home/superset_config.py
     volumes:
       - ./superset:/app/superset_home
-    command: >
-      bash -c "pip install psycopg2-binary &&
-               superset db upgrade &&
-               superset fab create-admin --username admin --firstname Admin --lastname User --email admin@superset.com --password admin &&
-               superset init &&
-               superset run -h 0.0.0.0 -p 8088"
+      - ./config/superset:/config
+    command: sh /config/init-superset.sh
+
+  tools-downloader:
+    image: ${ALPINE_IMAGE}
+    container_name: tools-downloader
+    env_file:
+      - ./.env
+    volumes:
+      - spark-jars:/jars
+      - ./config/tools:/config
+    command: sh /config/download-jmx.sh
+    healthcheck:
+      test: [ "CMD-SHELL", "test -f /jars/jmx_prometheus_javaagent.jar && test -f /jars/jmx_config.yml" ]
+      interval: 5s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+  prometheus:
+    image: ${PROMETHEUS_IMAGE}
+    container_name: prometheus
+    ports:
+      - "${PROMETHEUS_PORT}:9090"
+    networks:
+      - data-network
+    volumes:
+      - ./monitoring/prometheus:/etc/prometheus
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+      - '--storage.tsdb.retention.time=15d'
+      - '--web.enable-lifecycle'
+
+  grafana:
+    image: ${GRAFANA_IMAGE}
+    container_name: grafana
+    ports:
+      - "${GRAFANA_PORT}:3000"
+    networks:
+      - data-network
+    env_file:
+      - ./.env
+      - ./config/grafana/grafana.env
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./monitoring/grafana:/etc/grafana/provisioning
+    depends_on:
+      prometheus:
+        condition: service_started
 
 volumes:
   minio-data:
   spark-jars:
+  prometheus-data:
+  grafana-data:
+  postgres-data:
 
 
 networks:
