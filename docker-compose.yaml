@@ -161,41 +161,38 @@ healthcheck:
       start_period: 45s
 
   airflow-init:
-    #image: apache/airflow:2.9.2
-    build:
+        build:
       context: ./airflow
     container_name: airflow-init
     networks:
       - data-network
     depends_on:
-      - postgres
-    environment:
-      - AIRFLOW__CORE__EXECUTOR=LocalExecutor
-      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@postgres/airflow
+      postgres:
+        condition: service_healthy
+    env_file:
+      - ./.env
+      - ./config/airflow/airflow.env
     volumes:
-      - ./dags:/opt/airflow/dags
-      - ./logs:/opt/airflow/logs
-      - ./plugins:/opt/airflow/plugins
-    command: bash -c "airflow db init && airflow users create --username airflow --firstname admin --lastname admin --role Admin --email admin@example.com --password airflow"
+      - ./config/airflow/init-airflow.sh:/opt/airflow/init-airflow.sh:ro
+    entrypoint: [ "sh", "/opt/airflow/init-airflow.sh" ]
 
   airflow-webserver:
-    #image: apache/airflow:2.9.2-python3.10
-    build:
+        build:
       context: ./airflow
     container_name: airflow-webserver
     user: "${AIRFLOW_UID:-50000}" 
     depends_on:
-      - airflow-init
-      - kafka-setup
+      airflow-init:
+        condition: service_completed_successfully
+      kafka-setup:
+        condition: service_started
     ports:
       - "8082:8080" # <--- Spark와 충돌하지 않도록 8082 포트 사용
     networks:
       - data-network
-    environment:
-      - AIRFLOW__CORE__EXECUTOR=LocalExecutor
-      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@postgres/airflow
-      - AIRFLOW__WEBSERVER__SECRET_KEY=your_secret_key_here
-      - PROJECT_ROOT=/opt/airflow
+    env_file:
+      - ./.env
+      - ./config/airflow/airflow.env
     volumes:
       - ./dags:/opt/airflow/dags
       - ./src:/opt/ariflow/src
@@ -210,20 +207,20 @@ healthcheck:
     command: webserver
 
   airflow-scheduler:
-    #image: apache/airflow:2.9.2-python3.10
-    build:
+        build:
       context: ./airflow
     container_name: airflow-scheduler
     user: "${AIRFLOW_UID:-50000}"
     networks:
       - data-network
     depends_on:
-      - airflow-init
-      - kafka-setup
-    environment:
-      - AIRFLOW__CORE__EXECUTOR=LocalExecutor
-      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@postgres/airflow
-      - PROJECT_ROOT=/opt/airflow
+      airflow-init:
+        condition: service_completed_successfully
+      kafka-setup:
+        condition: service_started
+    env_file:
+      - ./.env
+      - ./config/airflow/airflow.env
     volumes:
       - ./dags:/opt/airflow/dags
       - ./src:/opt/airflow/src
