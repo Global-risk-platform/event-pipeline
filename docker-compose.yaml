@@ -1,45 +1,40 @@
 services:
   zookeeper:
-    image: confluentinc/cp-zookeeper:7.5.0
+    image: ${ZOOKEEPER_IMAGE}
     container_name: zookeeper
     ports:
       - "2181:2181"
     networks:
       - data-network
-    environment:
-      ZOOKEEPER_CLIENT_PORT: 2181
-      ZOOKEEPER_TICK_TIME: 2000
+    env_file:
+      - ./.env
+      - ./config/zookeeper/zookeeper.env
 
   kafka:
-    image: confluentinc/cp-kafka:7.5.0
+    image: ${KAFKA_IMAGE}
     container_name: kafka
     depends_on:
-      - zookeeper
+      zookeeper:
+        condition: service_started
     ports:
       - "9092:9092"
     networks:
       - data-network
-    environment:
-      KAFKA_BROKER_ID: 1
-      KAFKA_ZOOKEEPER_CONNECT: 'zookeeper:2181'
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT
-      KAFKA_LISTENERS: INTERNAL://0.0.0.0:29092,EXTERNAL://0.0.0.0:9092
-      KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka:29092,EXTERNAL://localhost:9092
-      KAFKA_INTER_BROKER_LISTENER_NAME: 'INTERNAL'
-      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
-      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
-      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+    env_file:
+      - ./.env
+      - ./config/kafka/kafka.env
 
   kafka-setup:
-    image: confluentinc/cp-kafka:7.5.0
+    image: ${KAFKA_IMAGE}
     container_name: kafka-setup
     depends_on:
-      - kafka
+      kafka:
+        condition: service_started
     networks:
       - data-network
-    command: >
-      bash -c " echo 'Waiting for Kafka to be ready...' && cub kafka-ready -b kafka:29092 1 60 && echo 'Kafka is ready!' && kafka-topics --create --topic gdelt_events --partitions 1 --replication-factor 1 --if-not-exists --bootstrap-server kafka:29092 && kafka-topics --create --topic wiki_events --partitions 1 --replication-factor 1 --if-not-exists --bootstrap-server kafka:29092 && echo 'Topics created successfully!' "
+    volumes:
+      - ./config/kafka:/config
+    command: [ "sh", "/config/setup-topics.sh" ]
 
   minio:
     image: minio/minio:RELEASE.2024-07-29T22-14-52Z
