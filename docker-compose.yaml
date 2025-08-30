@@ -134,29 +134,34 @@ services:
       - SPARK_LOCAL_DIRS=/tmp
 
   hive-metastore:
-    image: naushadh/hive-metastore:latest
+    image: ${HIVE_METASTORE_IMAGE}
     container_name: hive-metastore
     networks:
       - data-network
     ports:
       - "9083:9083"
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
+    env_file:
+      - ./.env
+      - ./config/hive-metastore/hive-metastore.env
     environment:
-      - DATABASE_HOST=postgres
-      - DATABASE_PORT=5432
-      - DATABASE_DB=metastore_db
-      - DATABASE_USER=airflow
-      - DATABASE_PASSWORD=airflow
+      # 이 서비스의 역할을 metastore로 지정한다
+      - SERVICE_NAME=metastore
+      # Metastore가 사용할 데이터베이스 정보를 알려준다.
       - DB_DRIVER=postgres
-      - S3_BUCKET=warehouse
-      - S3_PREFIX=hive
-      - S3_ENDPOINT=http://minio:9000
-      - S3_ENDPOINT_URL=http://minio:9000
-      - S3_ACCESS_KEY=minioadmin
-      - S3_SECRET_KEY=minioadmin
-      - AWS_ACCESS_KEY_ID=minioadmin
-      - AWS_SECRET_ACCESS_KEY=minioadmin
+      - METASTORE_DB_HOSTNAME=postgres
+      - METASTORE_DB_PORT=5432
+      - METASTORE_DB_NAME=metastore_db
+      - METASTORE_DB_USER=${POSTGRES_USER}
+      - METASTORE_DB_PASSWORD=${POSTGRES_PASSWORD}
+    healthcheck:
+      test: [ "CMD-SHELL", "/opt/hive/bin/schematool -dbType postgres -info || exit 1" ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 1m
 
   postgres:
     image: ${POSTGRES_IMAGE}
