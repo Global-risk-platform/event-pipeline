@@ -52,7 +52,7 @@ services:
       - minio-data:/data
 
   spark-master:
-        build:
+    build:
       context: ./spark-base
     container_name: spark-master
     command: master
@@ -69,7 +69,7 @@ services:
     ports:
       - "8081:8080"
       - "7077:7077"
-- "7071:7071" # JMX metrics port
+      - "7071:7071" # JMX metrics port
     networks:
       - data-network
     volumes:
@@ -81,7 +81,7 @@ services:
       - ./config/spark/spark.env
 
   spark-worker:
-        build:
+    build:
       context: ./spark-base
     container_name: spark-worker
     command: worker spark://spark-master:7077
@@ -100,7 +100,7 @@ services:
     volumes:
       - .:/app
       - ./spark-ivy-cache:/home/spark/.ivy2
-    - spark-jars:/opt/spark/jars
+      - spark-jars:/opt/spark/jars
     env_file:
       - ./.env
       - ./config/spark/spark.env
@@ -113,7 +113,7 @@ services:
     user: root # 나중에 배포할때 수정
     env_file:
       - ./.env
-- ./config/spark/spark.env
+      - ./config/spark/spark.env
     networks:
       - data-network
     depends_on:
@@ -125,7 +125,7 @@ services:
         condition: service_healthy
     ports:
       - "10001:10001" # dbt 연결용
-- "7073:7071" # JMX metrics port (또 다른 포트로 매핑)
+      - "7073:7071" # JMX metrics port (또 다른 포트로 매핑)
     volumes:
       - .:/app
       - ./spark-ivy-cache:/home/spark/.ivy2
@@ -169,13 +169,13 @@ services:
       - ./config/postgres/postgres.env
     volumes:
       - postgres-data:/var/lib/postgresql/data
-- ./config/postgres/init-postgres.sh:/docker-entrypoint-initdb.d/init-postgres.sh:ro
+      - ./config/postgres/init-postgres.sh:/docker-entrypoint-initdb.d/init-postgres.sh:ro
       - ./config/postgres/healthcheck.sh:/usr/local/bin/healthcheck.sh:ro
     ports:
       - "5432:5432"
     networks:
       - data-network
-healthcheck:
+    healthcheck:
       test: [ "CMD", "healthcheck.sh" ]
       interval: 5s
       timeout: 5s
@@ -183,7 +183,7 @@ healthcheck:
       start_period: 45s
 
   airflow-init:
-        build:
+    build:
       context: ./airflow
     container_name: airflow-init
     networks:
@@ -199,7 +199,7 @@ healthcheck:
     entrypoint: [ "sh", "/opt/airflow/init-airflow.sh" ]
 
   airflow-webserver:
-        build:
+    build:
       context: ./airflow
     container_name: airflow-webserver
     user: "${AIRFLOW_UID:-50000}" 
@@ -229,7 +229,7 @@ healthcheck:
     command: webserver
 
   airflow-scheduler:
-        build:
+    build:
       context: ./airflow
     container_name: airflow-scheduler
     user: "${AIRFLOW_UID:-50000}"
