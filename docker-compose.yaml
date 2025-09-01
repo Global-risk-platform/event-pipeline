@@ -51,6 +51,22 @@ services:
     volumes:
       - minio-data:/data
 
+  minio-setup:
+    image: minio/mc
+    container_name: minio-setup
+    depends_on:
+      minio:
+        condition: service_started
+    networks:
+      - data-network
+    env_file:
+      - ./.env
+      - ./config/minio/minio.env
+    volumes:
+      - ./config/minio:/config
+    entrypoint: ["/bin/sh"]
+    command: ["/config/setup-minio.sh"]
+
   spark-master:
     build:
       context: ./spark-base
@@ -132,8 +148,12 @@ services:
       - spark-jars:/opt/spark/jars
 
   hive-metastore:
-    image: ${HIVE_METASTORE_IMAGE}
+    build:
+      context: ./hive
+      args:
+        POSTGRESQL_JDBC_VERSION: ${POSTGRESQL_JDBC_VERSION}
     container_name: hive-metastore
+    entrypoint: [ "bash", "/custom-entrypoint.sh" ]
     networks:
       - data-network
     ports:
@@ -141,6 +161,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      minio-setup:
+        condition: service_completed_successfully
     env_file:
       - ./.env
       - ./config/hive-metastore/hive-metastore.env
@@ -155,11 +177,11 @@ services:
       - METASTORE_DB_USER=${POSTGRES_USER}
       - METASTORE_DB_PASSWORD=${POSTGRES_PASSWORD}
     healthcheck:
-      test: [ "CMD-SHELL", "/opt/hive/bin/schematool -dbType postgres -info || exit 1" ]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 1m
+      test: [ "CMD-SHELL", "netstat -tuln | grep 9083 || exit 1" ]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
 
   postgres:
     image: ${POSTGRES_IMAGE}
@@ -202,7 +224,7 @@ services:
     build:
       context: ./airflow
     container_name: airflow-webserver
-    user: "${AIRFLOW_UID:-50000}" 
+    user: "${AIRFLOW_UID:-50000}"
     depends_on:
       airflow-init:
         condition: service_completed_successfully
