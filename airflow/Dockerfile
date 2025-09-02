@@ -29,10 +29,12 @@ ENV PATH=$SPARK_HOME/bin:$PATH
 ENV PYSPARK_PYTHON=/usr/local/bin/python
 
 # 6. Spark 다운로드 및 설치
-RUN curl -o /tmp/spark.tgz https://archive.apache.org/dist/spark/spark-${SPARK_VERSION}/spark-${SPARK_VERSION}-bin-hadoop${HADOOP_VERSION}.tgz \
+# 6. Spark 다운로드 및 설치
+RUN curl -L -o /tmp/spark.tgz https://archive.apache.org/dist/spark/spark-${SPARK_VERSION}/spark-${SPARK_VERSION}-bin-hadoop${HADOOP_VERSION}.tgz \
     && tar -xvzf /tmp/spark.tgz -C /opt \
     && mv /opt/spark-${SPARK_VERSION}-bin-hadoop${HADOOP_VERSION} ${SPARK_HOME} \
     && rm /tmp/spark.tgz
+
 
 # 7. root로 전환해서 JAR 파일 다운로드 (권한 문제 해결)
 USER root
