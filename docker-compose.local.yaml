@@ -1,0 +1,88 @@
+version: '3.8'
+
+networks:
+  test-network:
+    driver: bridge
+
+volumes:
+  postgres-data:
+  metastore-warehouse:
+
+
+services:
+  # PostgreSQL for Hive Metastore
+  postgres:
+    image: postgres:13
+    container_name: postgres-test
+    environment:
+      POSTGRES_DB: metastore
+      POSTGRES_USER: hive
+      POSTGRES_PASSWORD: hive123
+    ports:
+      - "5432:5432"
+    networks:
+      - test-network
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U hive -d metastore" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Hive Metastore
+  hive-metastore:
+    image: juxpkr/geoevent-hive:0.1
+    container_name: hive-metastore-test
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DB_DRIVER: postgres
+      SERVICE_NAME: metastore
+      SERVICE_OPTS: "-Djavax.jdo.option.ConnectionDriverName=org.postgresql.Driver -Djavax.jdo.option.ConnectionURL=jdbc:postgresql://postgres:5432/metastore -Djavax.jdo.option.ConnectionUserName=hive -Djavax.jdo.option.ConnectionPassword=hive123"
+    ports:
+      - "9083:9083"
+    networks:
+      - test-network
+    volumes:
+      - metastore-warehouse:/opt/hive/data/warehouse
+    healthcheck:
+      test: [ "CMD-SHELL", "netstat -ln | grep 9083" ]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+
+  # Spark Thrift Server (Java 11)
+  spark-thrift-server:
+    build:
+      context: .
+      dockerfile: thrift-server/Dockerfile.java11
+      args:
+        SPARK_VERSION: ${SPARK_VERSION}
+        HADOOP_VERSION: ${HADOOP_VERSION}
+        POSTGRESQL_JDBC_VERSION: ${POSTGRESQL_JDBC_VERSION}
+        SPARK_TGZ_URL: ${SPARK_TGZ_URL}
+        COMMON_JARS_ZIP_URL: ${COMMON_JARS_ZIP_URL}
+        SPARK_JARS_ZIP_URL: ${SPARK_JARS_ZIP_URL}
+    image: juxpkr/geoevent-spark-thrift-server:java11-test
+    container_name: spark-thrift-server-test
+    depends_on:
+      hive-metastore:
+        condition: service_healthy
+    environment:
+      SPARK_CONF_spark_sql_hive_metastore_uris: thrift://hive-metastore:9083
+      SPARK_CONF_hive_server2_thrift_max_worker_threads: 200
+      SPARK_CONF_spark_cores_max: 2
+    ports:
+      - "10001:10001" # Thrift Server
+      - "4040:4040" # Spark UI
+    networks:
+      - test-network
+    command: >
+      sh -c "
+        echo 'Waiting for Hive Metastore...' &&
+        until nc -z hive-metastore 9083; do sleep 2; done &&
+        echo 'Starting Thrift Server...' &&
+        /opt/entrypoint.sh thrift-binary
+      "
