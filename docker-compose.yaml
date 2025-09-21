@@ -126,7 +126,7 @@ services:
         condition: on-failure # <-- 실패 시에만 재시작
 
   spark-master:
-    image: juxpkr/geoevent-spark-base:0.9
+    image: juxpkr/geoevent-spark-base:1.0
     container_name: spark-master
     entrypoint: [ "/bin/sh", "-c" ]
     command:
@@ -163,7 +163,7 @@ services:
         constraints:
           - node.role == manager
   spark-worker:
-    image: juxpkr/geoevent-spark-base:0.9
+    image: juxpkr/geoevent-spark-base:1.0
     container_name: spark-worker
     entrypoint: [ "/bin/sh", "-c" ]
     command:
@@ -191,7 +191,7 @@ services:
           memory: 16G
 
   spark-thrift-server:
-    image: juxpkr/geoevent-spark-base:0.9
+    image: juxpkr/geoevent-spark-base:1.0
     container_name: spark-thrift-server
     entrypoint: [ "/bin/sh", "-c" ]
     command:
@@ -230,7 +230,7 @@ services:
           memory: 4G
 
   spark-thrift-server-dev:
-    image: juxpkr/geoevent-spark-base:0.9
+    image: juxpkr/geoevent-spark-base:1.0
     container_name: spark-thrift-server-dev
     entrypoint: [ "/bin/sh", "-c" ]
     command:
@@ -338,7 +338,7 @@ services:
           - node.role == manager
 
   airflow-init:
-    image: juxpkr/geoevent-airflow:0.9
+    image: juxpkr/geoevent-airflow:1.0
     container_name: airflow-init
     networks:
       - data-network
@@ -353,7 +353,7 @@ services:
         condition: on-failure
 
   airflow-webserver:
-    image: juxpkr/geoevent-airflow:0.9
+    image: juxpkr/geoevent-airflow:1.0
     container_name: airflow-webserver
     user: "${AIRFLOW_UID:-50000}"
     ports:
@@ -399,7 +399,7 @@ services:
       - apparmor:unconfined
 
   airflow-scheduler:
-    image: juxpkr/geoevent-airflow:0.9
+    image: juxpkr/geoevent-airflow:1.0
     container_name: airflow-scheduler
     user: "${AIRFLOW_UID:-50000}"
     networks:
@@ -443,7 +443,7 @@ services:
       - apparmor:unconfined
 
   jupyter-lab:
-    image: juxpkr/geoevent-jupyter-lab:0.9
+    image: juxpkr/geoevent-jupyter-lab:1.0
     container_name: jupyter-lab
     ports:
       - "8888:8888"
@@ -461,7 +461,7 @@ services:
           - node.labels.type == monitoring
 
   dbt:
-    image: juxpkr/geoevent-dbt:0.9
+    image: juxpkr/geoevent-dbt:1.0
     container_name: dbt
     env_file:
       - ./.env
