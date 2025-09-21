@@ -191,7 +191,7 @@ services:
           memory: 16G
 
   spark-thrift-server:
-    image: juxpkr/geoevent-spark-base:1.0
+    image: juxpkr/geoevent-spark-thrift-server:1.0
     container_name: spark-thrift-server
     entrypoint: [ "/bin/sh", "-c" ]
     command:
@@ -230,7 +230,7 @@ services:
           memory: 4G
 
   spark-thrift-server-dev:
-    image: juxpkr/geoevent-spark-base:1.0
+    image: juxpkr/geoevent-spark-thrift-server:1.0
     container_name: spark-thrift-server-dev
     entrypoint: [ "/bin/sh", "-c" ]
     command:
