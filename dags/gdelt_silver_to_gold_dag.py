@@ -5,6 +5,8 @@ from airflow.models.dag import DAG
 from airflow.operators.bash import BashOperator
 from airflow.providers.apache.spark.operators.spark_submit import SparkSubmitOperator
 from airflow.providers.docker.operators.docker import DockerOperator
+from airflow.decorators import task
+from airflow.providers.apache.spark.hooks.jdbc import SparkJDBCHook
 from docker.types import Mount
 
 with DAG(
@@ -21,21 +23,21 @@ with DAG(
     dbt_project_host_path = f"{os.getenv('PROJECT_ROOT', '/opt/airflow')}/transforms"
 
     # Task 0: dbt 실행 전, 필요한 스키마 미리 생성
-    prepare_dbt_schemas = BashOperator(
-        task_id="prepare_dbt_schemas",
-        # beeline을 사용해 Spark Thrift 서버에 직접 CREATE DATABASE 명령을 전달
-        bash_command="""
-        /opt/spark/bin/beeline -u jdbc:hive2://spark-thrift-server:10001 -n dummy -p dummy -e "
-        CREATE DATABASE IF NOT EXISTS seed_prod;
-        CREATE DATABASE IF NOT EXISTS staging_prod;
-        CREATE DATABASE IF NOT EXISTS gold_prod;
-        "
-        """,
-        doc_md="""
-        dbt 실행에 필요한 Spark/Hive 스키마(데이터베이스)를 미리 생성.
-        dbt의 훅 기능이 불안정하게 동작할 경우를 대비
-        """,
-    )
+    @task(task_id="prepare_dbt_schemas_with_hook")
+    def prepare_dbt_schemas():
+        """SparkJDBCHook을 사용해 스키마를 생성합니다."""
+        # 1. '인터컴 주소록'에서 연결 정보를 ID로 불러온다.
+        hook = SparkJDBCHook(spark_conn_id="spark_thrift_default")
+        
+        # 2. 실행할 SQL 명령들을 리스트로 정의한다.
+        sql_statements = [
+            "CREATE DATABASE IF NOT EXISTS seed_prod",
+            "CREATE DATABASE IF NOT EXISTS staging_prod",
+            "CREATE DATABASE IF NOT EXISTS gold_prod"
+        ]
+        
+        # 3. Hook을 통해 SQL을 직접 실행시킨다.
+        hook.run(sql=sql_statements)
 
     # Task 1: dbt Transformation (Silver → Gold)
     dbt_transformation = DockerOperator(
