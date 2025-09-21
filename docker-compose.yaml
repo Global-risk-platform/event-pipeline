@@ -215,7 +215,7 @@ services:
       - "4041:4041"
     volumes:
       - ./spark-ivy-cache:/home/spark/.ivy2
-      - spark-jars:/opt/spark/jars
+      # spark-jars 볼륨 제거: thrift-server 전용 이미지의 JAR들 사용
     deploy:
       # 운영용 리소스 할당
       placement:
@@ -254,7 +254,6 @@ services:
       - "4043:4041"
     volumes:
       - ./spark-ivy-cache:/home/spark/.ivy2
-      - spark-jars:/opt/spark/jars
     deploy:
       # 개발용 리소스 할당
       placement:
