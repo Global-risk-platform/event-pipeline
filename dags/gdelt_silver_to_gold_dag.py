@@ -22,24 +22,8 @@ with DAG(
     # Airflow 워커 컨테이너 내부에 있는 dbt 프로젝트 경로를 변수로 지정
     dbt_project_host_path = f"{os.getenv('PROJECT_ROOT', '/opt/airflow')}/transforms"
 
-    # Task 0: dbt 실행 전, 필요한 스키마 미리 생성
-    @task(task_id="prepare_dbt_schemas_with_hook")
-    def prepare_dbt_schemas():
-        """SparkJDBCHook을 사용해 스키마를 생성합니다."""
-        # 1. '인터컴 주소록'에서 연결 정보를 ID로 불러온다.
-        hook = SparkJDBCHook(spark_conn_id="spark_thrift_default")
-        
-        # 2. 실행할 SQL 명령들을 리스트로 정의한다.
-        sql_statements = [
-            "CREATE DATABASE IF NOT EXISTS seed_prod",
-            "CREATE DATABASE IF NOT EXISTS staging_prod",
-            "CREATE DATABASE IF NOT EXISTS gold_prod"
-        ]
-        
-        # 3. Hook을 통해 SQL을 직접 실행시킨다.
-        hook.run(sql=sql_statements)
-
     # Task 1: dbt Transformation (Silver → Gold)
+    # 스키마는 dbt_project.yml의 on-run-start 훅에서 자동 생성됨
     dbt_transformation = DockerOperator(
         task_id="dbt_transformation",
         # image="juxpkr/geoevent-dbt:0.1",
@@ -89,8 +73,5 @@ with DAG(
         """,
     )
 
-    # Task 실행 인스턴스 생성
-    prepare_schemas_task = prepare_dbt_schemas()
-
-    # 작업 순서 정의
-    prepare_schemas_task >> dbt_transformation >> migrate_to_postgres_task
+    # 작업 순서 정의 (스키마 생성은 dbt에서 자동 처리)
+    dbt_transformation >> migrate_to_postgres_task
