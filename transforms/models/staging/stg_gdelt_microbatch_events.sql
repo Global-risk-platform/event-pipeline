@@ -1,7 +1,12 @@
 -- 증분 모델 (Incremental Model) 설정
 {{ config(
     materialized='incremental',
-    unique_key=['global_event_id']
+    unique_key=['global_event_id'],
+    pre_hook=[
+        "CREATE DATABASE IF NOT EXISTS seed_prod",
+        "CREATE DATABASE IF NOT EXISTS staging_prod",
+        "CREATE DATABASE IF NOT EXISTS gold_prod"
+    ]
 ) }}
 
 SELECT
