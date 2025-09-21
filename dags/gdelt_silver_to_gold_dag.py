@@ -25,7 +25,7 @@ with DAG(
         task_id="prepare_dbt_schemas",
         # beeline을 사용해 Spark Thrift 서버에 직접 CREATE DATABASE 명령을 전달
         bash_command="""
-        beeline -u jdbc:hive2://spark-thrift-server:10001 -n dummy -p dummy -e "
+        /opt/spark/bin/beeline -u jdbc:hive2://spark-thrift-server:10001 -n dummy -p dummy -e "
         CREATE DATABASE IF NOT EXISTS seed_prod;
         CREATE DATABASE IF NOT EXISTS staging_prod;
         CREATE DATABASE IF NOT EXISTS gold_prod;
