@@ -336,7 +336,7 @@ services:
           - node.role == manager
 
   airflow-init:
-    image: juxpkr/geoevent-airflow:1.0
+    image: juxpkr/geoevent-airflow:1.1
     container_name: airflow-init
     networks:
       - data-network
@@ -351,7 +351,7 @@ services:
         condition: on-failure
 
   airflow-webserver:
-    image: juxpkr/geoevent-airflow:1.0
+    image: juxpkr/geoevent-airflow:1.1
     container_name: airflow-webserver
     user: "${AIRFLOW_UID:-50000}"
     ports:
@@ -397,7 +397,7 @@ services:
       - apparmor:unconfined
 
   airflow-scheduler:
-    image: juxpkr/geoevent-airflow:1.0
+    image: juxpkr/geoevent-airflow:1.1
     container_name: airflow-scheduler
     user: "${AIRFLOW_UID:-50000}"
     networks:
