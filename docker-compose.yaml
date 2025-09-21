@@ -126,7 +126,7 @@ services:
         condition: on-failure # <-- 실패 시에만 재시작
 
   spark-master:
-    image: juxpkr/geoevent-spark-base:1.0
+    image: juxpkr/geoevent-spark-base:1.1
     container_name: spark-master
     entrypoint: [ "/bin/sh", "-c" ]
     command:
@@ -163,7 +163,7 @@ services:
         constraints:
           - node.role == manager
   spark-worker:
-    image: juxpkr/geoevent-spark-base:1.0
+    image: juxpkr/geoevent-spark-base:1.1
     container_name: spark-worker
     entrypoint: [ "/bin/sh", "-c" ]
     command:
@@ -191,7 +191,7 @@ services:
           memory: 16G
 
   spark-thrift-server:
-    image: juxpkr/geoevent-spark-thrift-server:1.0
+    image: juxpkr/geoevent-spark-base:1.1
     container_name: spark-thrift-server
     entrypoint: [ "/bin/sh", "-c" ]
     command:
@@ -203,7 +203,6 @@ services:
     env_file:
       - ./.env
     environment:
-      SPARK_SUBMIT_OPTS: '--add-opens java.base/jdk.internal.loader=ALL-UNNAMED --add-opens java.base/java.net=ALL-UNNAMED'
       SPARK_CONF_hive_server2_thrift_max_worker_threads: 200
       SPARK_CONF_spark_cores_max: 2
       SPARK_CONF_spark_sql_hive_metastore_uris: thrift://hive-metastore:9083
@@ -215,7 +214,7 @@ services:
       - "4041:4041"
     volumes:
       - ./spark-ivy-cache:/home/spark/.ivy2
-      # spark-jars 볼륨 제거: thrift-server 전용 이미지의 JAR들 사용
+      - spark-jars:/opt/spark/jars
     deploy:
       # 운영용 리소스 할당
       placement:
@@ -230,7 +229,7 @@ services:
           memory: 4G
 
   spark-thrift-server-dev:
-    image: juxpkr/geoevent-spark-thrift-server:1.0
+    image: juxpkr/geoevent-spark-base:1.1
     container_name: spark-thrift-server-dev
     entrypoint: [ "/bin/sh", "-c" ]
     command:
@@ -244,7 +243,6 @@ services:
     networks:
       - data-network
     environment:
-      SPARK_SUBMIT_OPTS: '--add-opens java.base/jdk.internal.loader=ALL-UNNAMED --add-opens java.base/java.net=ALL-UNNAMED'
       SPARK_CONF_hive_server2_thrift_max_worker_threads: 200
       SPARK_CONF_spark_cores_max: 2
       SPARK_CONF_spark_sql_hive_metastore_uris: thrift://hive-metastore:9083
@@ -254,6 +252,7 @@ services:
       - "4043:4041"
     volumes:
       - ./spark-ivy-cache:/home/spark/.ivy2
+      - spark-jars:/opt/spark/jars
     deploy:
       # 개발용 리소스 할당
       placement:
