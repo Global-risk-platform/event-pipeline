@@ -6,7 +6,7 @@ from airflow.operators.bash import BashOperator
 from airflow.providers.apache.spark.operators.spark_submit import SparkSubmitOperator
 from airflow.providers.docker.operators.docker import DockerOperator
 from airflow.decorators import task
-from airflow.providers.apache.spark.hooks.jdbc import SparkJDBCHook
+from airflow.providers.apache.spark.hooks.spark_jdbc import SparkJDBCHook
 from docker.types import Mount
 
 with DAG(
