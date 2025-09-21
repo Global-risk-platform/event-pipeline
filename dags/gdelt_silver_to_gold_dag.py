@@ -89,5 +89,8 @@ with DAG(
         """,
     )
 
+    # Task 실행 인스턴스 생성
+    prepare_schemas_task = prepare_dbt_schemas()
+
     # 작업 순서 정의
-    prepare_dbt_schemas >> dbt_transformation >> migrate_to_postgres_task
+    prepare_schemas_task >> dbt_transformation >> migrate_to_postgres_task
